@@ -17,11 +17,11 @@ end
 def run(dir, file)
   case true
   when file.end_with?(".cpp")
-    puts "-> Compiling #{dir}..."
-    `g++ #{file} -o bin/#{dir}`
-    puts "-> Running #{dir}..."
-    puts `bin/#{dir}`
-    File.delete("bin/#{dir}")
+    puts "-> Compiling #{file}..."
+    `g++ #{file} -o bin/a.out`
+    puts "-> Running #{file}..."
+    puts `bin/a.out`
+    File.delete("bin/a.out")
   end
 end
 
