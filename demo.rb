@@ -1,4 +1,9 @@
 def main
+  filter = nil
+  if ARGV.count > 0
+    filter = ARGV[0]
+  end
+
   begin
     Dir.mkdir("bin")
   rescue
@@ -6,21 +11,25 @@ def main
 
   dirs = Dir.glob("*")
   dirs = dirs.select { |file| File.directory? file }
-  dirs.each { |dir| demo dir }
+  dirs.each { |dir| demo dir, filter }
 end
 
-def demo(dir)
+def demo(dir, filter)
   files = Dir.glob("#{dir}/*")
-  files.each { |file| run dir, file }
+  files.each { |file| run file, filter }
 end
 
-def run(dir, file)
+def run(file, filter)
+  if filter && !(file.include? filter)
+    return
+  end
+
   case true
   when file.end_with?(".cpp")
     puts "-> Compiling #{file}..."
     `g++ #{file} -o bin/a.out`
     puts "-> Running #{file}..."
-    puts `bin/a.out`
+    system("bin/a.out")
     File.delete("bin/a.out")
   end
 end
