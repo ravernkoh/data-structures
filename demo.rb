@@ -20,7 +20,7 @@ def run(dir, file)
     puts "-> Compiling #{file}..."
     `g++ #{file} -o bin/a.out`
     puts "-> Running #{file}..."
-    puts `bin/a.out`
+    system("bin/a.out")
     File.delete("bin/a.out")
   end
 end
