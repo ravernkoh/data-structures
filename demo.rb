@@ -1,37 +1,50 @@
-def main
-  filter = nil
-  if ARGV.count > 0
-    filter = ARGV[0]
-  end
+#!/usr/bin/env ruby
 
-  begin
-    Dir.mkdir("bin")
-  rescue
-  end
+require 'set'
+require 'tmpdir'
 
-  dirs = Dir.glob("*")
-  dirs = dirs.select { |file| File.directory? file }
-  dirs.each { |dir| demo dir, filter }
+# get_sources takes in the filepath to a file and returns a Set of source files
+# by reading the #include statements in the given file
+def get_sources(filepath)
+  content = File.read(filepath, mode: 'r')
+  headers = content.scan(/^#include\ \"(.*?)\"$/m).map { |header| header[0] }
+  file_dir = File.dirname(filepath)
+  headers.map do |header|
+    source = File.path("#{file_dir}/#{header.gsub(/.h$/, '.cpp')}")
+    raise "File #{source} does not exist" unless File.exist? source
+
+    source
+  end.to_set
 end
 
-def demo(dir, filter)
-  files = Dir.glob("#{dir}/*")
-  files.each { |file| run file, filter }
-end
-
-def run(file, filter)
-  if filter && !(file.include? filter)
-    return
-  end
-
-  case true
-  when file.end_with?(".cpp")
-    puts "-> Compiling #{file}..."
-    `g++ #{file} -o bin/a.out`
-    puts "-> Running #{file}..."
-    system("bin/a.out")
-    File.delete("bin/a.out")
+# run takes in an array of filepaths(to source files), compiles, runs, and
+# deletes the executables and the temp directories
+def run(files)
+  filenames = files.map { |file| File.basename(file) }
+  puts "Compiling #{filenames * ' '}..."
+  Dir.mktmpdir('rucppy') do |dir|
+    compile_command = "g++ #{files * ' '} -o #{dir}/a.out"
+    # puts compile_command
+    `#{compile_command}`
+    system("#{dir}/a.out")
   end
 end
 
-main
+if ARGV.count.zero?
+  STDERR.puts "Usage: #{$PROGRAM_NAME} <filename.cpp>"
+  exit 1
+end
+
+MAIN_FILE = File.realpath(ARGV[0])
+
+queue = [MAIN_FILE]
+lookup = Set[]
+
+while (filepath = queue.pop) && !filepath.nil?
+  next if lookup.include? filepath
+
+  lookup.add filepath
+  get_sources(filepath).each { |filename| queue << filename }
+end
+
+run(lookup.to_a)
