@@ -63,45 +63,39 @@ int main() {
     int n = inputNumber("Enter your option: ");
 
     switch (n) {
-      case 1: 
-        for (int i = 0; i < list.length(); i++) {
-          cout << "(" << i << ") ";
-          list.get(i).print();
+    case 1:
+      for (int i = 0; i < list.length(); i++) {
+        cout << "(" << i << ") ";
+        list.get(i).print();
+      }
+      break;
+    case 2: {
+      string name = inputString("Enter the name: ");
+      string phone = inputString("Enter the phone number: ");
+      Contact contact(name, phone);
+      list.add(contact);
+    } break;
+    case 3: {
+      int index = inputNumber("Enter the index: ");
+      list.remove(index);
+    } break;
+    case 4: {
+      string phone = inputString("Enter the phone number: ");
+      for (int i = 0; i < list.length(); i++) {
+        Contact contact = list.get(i);
+        if (contact.getContact() != phone) {
+          continue;
         }
-        break;
-      case 2:
-        {
-          string name = inputString("Enter the name: ");
-          string phone = inputString("Enter the phone number: ");
-          Contact contact(name, phone);
-          list.add(contact);
-        }
-        break;
-      case 3:
-        {
-          int index = inputNumber("Enter the index: ");
-          list.remove(index);
-        }
-        break;
-      case 4:
-        {
-          string phone = inputString("Enter the phone number: ");
-          for (int i = 0; i < list.length(); i++) {
-            Contact contact = list.get(i);
-            if (contact.getContact() != phone) {
-              continue;
-            }
 
-            cout << "(" << i << ") ";
-            list.get(i).print();
-          }
-        }
-        break;
-      case 0:
-        return 0;
-      default:
-        cout << "You have entered an invalid option! Try again." << endl;
-        break;
+        cout << "(" << i << ") ";
+        list.get(i).print();
+      }
+    } break;
+    case 0:
+      return 0;
+    default:
+      cout << "You have entered an invalid option! Try again." << endl;
+      break;
     }
   }
 }

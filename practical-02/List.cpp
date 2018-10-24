@@ -10,17 +10,11 @@ Contact::Contact(string name, string contact) {
   this->contact = contact;
 }
 
-string Contact::getName() {
-  return this->name;
-}
+string Contact::getName() { return this->name; }
 
-string Contact::getContact() {
-  return this->contact;
-}
+string Contact::getContact() { return this->contact; }
 
-void Contact::print() {
-  cout << this->name << ": " << this->contact << endl;
-}
+void Contact::print() { cout << this->name << ": " << this->contact << endl; }
 
 List::List(int cap) {
   this->cap = cap;
@@ -28,12 +22,11 @@ List::List(int cap) {
   this->contacts = (Contact *)malloc(sizeof(Contact) * this->cap);
 }
 
-void List::add(Contact contact) {
-  this->contacts[this->len++] = contact;
-}
+void List::add(Contact contact) { this->contacts[this->len++] = contact; }
 
 Contact List::remove(int index) {
-  if (!this->valid(index)) return Contact("", "");
+  if (!this->valid(index))
+    return Contact("", "");
 
   Contact contact = this->contacts[index];
 
@@ -46,14 +39,11 @@ Contact List::remove(int index) {
 }
 
 Contact List::get(int index) {
-  if (!this->valid(index)) return Contact("", "");
+  if (!this->valid(index))
+    return Contact("", "");
   return this->contacts[index];
 }
 
-int List::length() {
-  return this->len;
-}
+int List::length() { return this->len; }
 
-bool List::valid(int index) {
-  return index >= 0 && index < this->len;
-}
+bool List::valid(int index) { return index >= 0 && index < this->len; }
