@@ -1,47 +1,35 @@
 #include "List.h"
-
 #include <iostream>
 #include <string>
 
 using namespace std;
 
-Contact::Contact(string name, string contact) {
-  this->name = name;
-  this->contact = contact;
-}
-
-string Contact::getName() { return this->name; }
-
-string Contact::getContact() { return this->contact; }
-
-void Contact::print() { cout << this->name << ": " << this->contact << endl; }
-
 List::List(int cap) {
   this->cap = cap;
   this->len = 0;
-  this->contacts = (Contact *)malloc(sizeof(Contact) * this->cap);
+  this->people = new Person *[cap];
 }
 
-void List::add(Contact contact) { this->contacts[this->len++] = contact; }
+void List::add(Person *person) { this->people[this->len++] = person; }
 
-Contact List::remove(int index) {
+bool List::remove(int index) {
   if (!this->valid(index))
-    return Contact("", "");
+    return false;
 
-  Contact contact = this->contacts[index];
+  delete this->people[index];
 
   this->len--;
   for (int i = index; i < this->len; i++) {
-    this->contacts[index] = this->contacts[index + 1];
+    this->people[index] = this->people[index + 1];
   }
 
-  return contact;
+  return true;
 }
 
-Contact List::get(int index) {
+Person *List::get(int index) {
   if (!this->valid(index))
-    return Contact("", "");
-  return this->contacts[index];
+    return nullptr;
+  return this->people[index];
 }
 
 int List::length() { return this->len; }

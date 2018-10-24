@@ -5,6 +5,7 @@
  */
 
 #include "List.h"
+#include "Person.h"
 #include <iostream>
 
 using namespace std;
@@ -66,14 +67,14 @@ int main() {
     case 1:
       for (int i = 0; i < list.length(); i++) {
         cout << "(" << i << ") ";
-        list.get(i).print();
+        list.get(i)->print();
       }
       break;
     case 2: {
       string name = inputString("Enter the name: ");
       string phone = inputString("Enter the phone number: ");
-      Contact contact(name, phone);
-      list.add(contact);
+      Person *person = new Person(name, phone);
+      list.add(person);
     } break;
     case 3: {
       int index = inputNumber("Enter the index: ");
@@ -82,13 +83,13 @@ int main() {
     case 4: {
       string phone = inputString("Enter the phone number: ");
       for (int i = 0; i < list.length(); i++) {
-        Contact contact = list.get(i);
-        if (contact.getContact() != phone) {
+        Person *person = list.get(i);
+        if (person->getTelNo() != phone) {
           continue;
         }
 
         cout << "(" << i << ") ";
-        list.get(i).print();
+        list.get(i)->print();
       }
     } break;
     case 0:
