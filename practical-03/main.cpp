@@ -8,10 +8,12 @@ int main() {
   nameList.add("Alice");
   nameList.add("Jacky");
   nameList.add("Wendy");
-  cout << endl;
   nameList.print();
   nameList.add(1, "Brenda");
-  cout << endl;
+  nameList.print();
+  nameList.remove(2);
+  nameList.print();
+  nameList.remove(0);
   nameList.print();
   return 0;
 }

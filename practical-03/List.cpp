@@ -26,7 +26,24 @@ bool List::add(int index, Item item) {
   return true;
 }
 
+void List::remove(int index) {
+  if (index >= this->size) {
+    return;
+  }
+
+  Node *cur = this->firstNode;
+  while (index-- > 0) {
+    cur = cur->next;
+  }
+
+  Node *temp = cur->next;
+  cur->next = cur->next->next;
+  delete temp;
+  this->size--;
+}
+
 void List::print() {
+  cout << "----" << endl;
   Node *cur = this->firstNode;
   while (cur->next != nullptr) {
     cur = cur->next;
