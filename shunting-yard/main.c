@@ -378,8 +378,8 @@ void parser_advance(parser_t *p) {
   p->peek = token_make_error();
 }
 
-// Assembles an expression from the operator and the expression stack.
-expr_t *parser_assemble_bin_op(parser_t *p, op_kind_t op, expr_stack_t *exprs) {
+// Build an expression from the operator and the expression stack.
+expr_t *parser_build_bin_op(parser_t *p, op_kind_t op, expr_stack_t *exprs) {
   struct expr_t *left = (struct expr_t *)expr_stack_pop(exprs);
   struct expr_t *right = (struct expr_t *)expr_stack_pop(exprs);
   if (left == NULL || right == NULL) {
@@ -405,7 +405,7 @@ expr_t *parser_parse(parser_t *p) {
       while (ops.len > 0) {
         op_kind_t op = op_stack_pop(&ops);
 
-        expr_t *e = parser_assemble_bin_op(p, op, &exprs);
+        expr_t *e = parser_build_bin_op(p, op, &exprs);
         if (e == NULL) {
           return NULL;
         }
@@ -437,7 +437,7 @@ expr_t *parser_parse(parser_t *p) {
 
         op = op_stack_pop(&ops);
 
-        expr_t *e = parser_assemble_bin_op(p, op, &exprs);
+        expr_t *e = parser_build_bin_op(p, op, &exprs);
         if (e == NULL) {
           return NULL;
         }
@@ -458,6 +458,12 @@ expr_t *parser_parse(parser_t *p) {
 
     printf("error: invalid token type\n");
     exit(1);
+  }
+
+  if (exprs.len > 0) {
+    p->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
+    sprintf(p->error, "unbalanced binary operations");
+    return NULL;
   }
 
   return expr;
