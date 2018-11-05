@@ -10,6 +10,7 @@ typedef int bool;
 #define MAX_TOKEN_NUM 50
 #define MAX_LITERAL_LENGTH 50
 #define MAX_INPUT_LENGTH 100
+#define MAX_ERROR_LENGTH 50
 
 bool is_digit(char c) { return c >= '0' && c <= '9'; }
 bool is_space(char c) { return c == '\t' || c == ' '; }
@@ -89,10 +90,11 @@ typedef struct {
 
 // Creates a new scanner.
 scanner_t *scanner_make(const char *source) {
-  scanner_t *t = (scanner_t *)malloc(sizeof(scanner_t));
-  t->source = source;
-  t->literal = (char *)malloc(sizeof(char) * MAX_LITERAL_LENGTH);
-  return t;
+  scanner_t *s = (scanner_t *)malloc(sizeof(scanner_t));
+  s->source = source;
+  s->literal = (char *)malloc(sizeof(char) * MAX_LITERAL_LENGTH);
+  s->error = NULL;
+  return s;
 }
 
 // Peek the source at the current char.
@@ -137,7 +139,8 @@ token_t scanner_next(scanner_t *s) {
       return token_make(TOKEN_OP, token_value_make_op(OP_DIV));
     }
 
-    sprintf(s->error, "unexpected char %c", peek);
+    s->error = (char *)malloc(sizeof(char) * MAX_ERROR_LENGTH);
+    sprintf(s->error, "unexpected char '%c'", peek);
     return token_make_end();
   }
 }
@@ -152,8 +155,19 @@ int main() {
     source[strlen(source) - 1] = '\0';
 
     // Create the scanner around the source.
-    scanner_t *t = scanner_make(source);
-    printf("%s\n", token_disp(scanner_next(t)));
+    scanner_t *s = scanner_make(source);
+    while (TRUE) {
+      token_t t = scanner_next(s);
+      if (t.kind == TOKEN_END) {
+        break;
+      }
+      printf("%s\n", token_disp(t));
+    }
+
+    // Check for scanner error.
+    if (s->error != NULL) {
+      printf("error: %s\n", s->error);
+    }
   }
 
   return 0;
