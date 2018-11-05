@@ -1,5 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#define TRUE 1
+#define FALSE 0
 
 #define MAX_STACK_SIZE 50
 #define MAX_TOKEN_NUM 50
@@ -8,7 +12,7 @@
 
 typedef int TokenType;
 const TokenType TOKEN_OP = 1;
-const TokenType TOKEN_NUMBER = 2;
+const TokenType TOKEN_NUM = 2;
 
 typedef int Op;
 const Op OP_ADD = 1;
@@ -18,26 +22,47 @@ const Op OP_DIV = 4;
 
 typedef struct {
   TokenType type;
-  int number;
-  char *literal;
+  int op;
+} TokenOp;
+
+typedef struct {
+  TokenType type;
+  int num;
+} TokenNum;
+
+typedef union {
+  TokenOp op;
+  TokenNum num;
 } Token;
 
 typedef struct {
   const char *source;
   char *literal;
-  char *peek;
 } Tokenizer;
 
-Tokenizer TokenizerMake(const char *source) { return {source, NULL}; }
+Tokenizer *TokenizerNew(const char *source) {
+  Tokenizer *t = (Tokenizer *)malloc(sizeof(Tokenizer));
+  t->source = source;
+  t->literal = NULL;
+  return t;
+}
 
-Token TokenizerNext(Tokenizer *t) {}
+// Peek the source at the current char.
+char TokenizerPeek(Tokenizer *t) { return *t->source; }
 
-char *TokenizerPeek(Tokenizer *t) {}
-
+// Advance the source to the next char.
 void TokenizerAdvance(Tokenizer *t) { t->source = &t->source[1]; }
 
+// Returns the next token.
+Token *TokenizerNext(Tokenizer *t) {
+  if (TokenizerPeek(t) == '\0') {
+    return NULL;
+  }
+  return NULL;
+}
+
 int main() {
-  while (true) {
+  while (TRUE) {
     printf("> ");
 
     // Read in the source.
@@ -45,7 +70,8 @@ int main() {
     fgets(source, MAX_INPUT_LENGTH, stdin);
     source[strlen(source) - 1] = '\0';
 
-    printf("%s\n", source);
+    Tokenizer *t = TokenizerNew(source);
+    printf("%d\n", TokenizerNext(t));
   }
 
   return 0;
