@@ -6,21 +6,23 @@ typedef int bool;
 #define TRUE 1
 #define FALSE 0
 
-#define MAX_LITERAL_LENGTH 50
-#define MAX_INPUT_LENGTH 100
-#define MAX_ERROR_LENGTH 50
+#define MAX_STACK_LEN 20
+#define MAX_LITERAL_LEN 20
+#define MAX_INPUT_LEN 200
+#define MAX_ERROR_LEN 30
 
 bool is_digit(char c) { return c >= '0' && c <= '9'; }
 bool is_space(char c) { return c == '\t' || c == ' '; }
 
 typedef char op_kind_t;
+const op_kind_t OP_ERROR = 0;
 const op_kind_t OP_ADD = '+';
 const op_kind_t OP_SUB = '-';
 const op_kind_t OP_MUL = '*';
 const op_kind_t OP_DIV = '/';
 
 typedef int token_kind_t;
-const token_kind_t TOKEN_END = 0;
+const token_kind_t TOKEN_ERROR = 0;
 const token_kind_t TOKEN_OP = 1;
 const token_kind_t TOKEN_NUM = 2;
 
@@ -56,11 +58,10 @@ token_t token_make(token_kind_t kind, token_value_t value) {
   return t;
 }
 
-// Creates a new invalid token.
-token_t token_make_end() {
-  token_t t;
-  t.kind = TOKEN_END;
-  return t;
+// Creates a new error token.
+token_t token_make_error() {
+  token_value_t v;
+  return token_make(TOKEN_ERROR, v);
 }
 
 // Displays the token.
@@ -72,7 +73,7 @@ const char *token_disp(token_t t) {
     return op;
   }
   case TOKEN_NUM: {
-    char *num = (char *)malloc(sizeof(char) * MAX_LITERAL_LENGTH);
+    char *num = (char *)malloc(sizeof(char) * MAX_LITERAL_LEN);
     sprintf(num, "%i", t.value.num);
     return num;
   }
@@ -90,7 +91,7 @@ typedef struct {
 scanner_t *scanner_make(const char *source) {
   scanner_t *s = (scanner_t *)malloc(sizeof(scanner_t));
   s->source = source;
-  s->literal = (char *)malloc(sizeof(char) * MAX_LITERAL_LENGTH);
+  s->literal = (char *)malloc(sizeof(char) * MAX_LITERAL_LEN);
   s->error = NULL;
   return s;
 }
@@ -113,6 +114,11 @@ token_t scanner_next_number(scanner_t *s) {
 
     s->literal[len++] = peek;
     scanner_advance(s);
+
+    if (len == MAX_LITERAL_LEN) {
+      printf("error: exceeded max literal length\n");
+      exit(1);
+    }
   }
   s->literal[len] = '\0';
 
@@ -126,7 +132,7 @@ token_t scanner_next(scanner_t *s) {
 
     // Check for end or whitespace.
     if (peek == '\0') {
-      return token_make_end();
+      return token_make_error();
     } else if (is_space(peek)) {
       scanner_advance(s);
       continue;
@@ -152,14 +158,39 @@ token_t scanner_next(scanner_t *s) {
       return token_make(TOKEN_OP, token_value_make_op(OP_DIV));
     }
 
-    s->error = (char *)malloc(sizeof(char) * MAX_ERROR_LENGTH);
+    s->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
     sprintf(s->error, "unexpected char '%c'", peek);
-    return token_make_end();
+    return token_make_error();
   }
 }
 
+typedef struct {
+  int len;
+  op_kind_t *stack;
+} op_stack_t;
+
+// Creates a new operator stack.
+op_stack_t op_stack_make() {
+  op_stack_t s;
+  s.len = 0;
+  s.stack = (op_kind_t *)malloc(sizeof(op_kind_t) * MAX_STACK_LEN);
+  return s;
+}
+
+// Pushes a new operator onto the stack.
+void op_stack_push(op_stack_t *s, op_kind_t op) {
+  if (s->len > MAX_STACK_LEN) {
+    printf("error: exceeded max stack length\n");
+    exit(1);
+  }
+  s->stack[s->len++] = op;
+}
+
+// Pops an operator off the stack.
+op_kind_t op_stack_pop(op_stack_t *s) { return s->stack[--s->len]; }
+
 typedef int expr_kind_t;
-const expr_kind_t EXPR_BIN_ERR = 0;
+const expr_kind_t EXPR_ERROR = 0;
 const expr_kind_t EXPR_BIN_OP = 1;
 const expr_kind_t EXPR_NUM = 2;
 
@@ -209,20 +240,39 @@ expr_t expr_make(expr_kind_t kind, expr_value_t value) {
   return e;
 }
 
+// Creates a new error expression.
+expr_t expr_make_error() {
+  expr_value_t v;
+  return expr_make(EXPR_ERROR, v);
+}
+
+typedef struct {
+  scanner_t *scanner;
+} parser_t;
+
+// Creates a new parser.
+parser_t *parser_make(scanner_t *scanner) {
+  parser_t *p = (parser_t *)malloc(sizeof(parser_t));
+  return p;
+}
+
+// Parses an expression.
+expr_t parser_parse(parser_t *p) { return expr_make_error(); }
+
 int main() {
   while (TRUE) {
     printf("> ");
 
     // Read in the source.
-    char source[MAX_INPUT_LENGTH];
-    fgets(source, MAX_INPUT_LENGTH, stdin);
+    char source[MAX_INPUT_LEN];
+    fgets(source, MAX_INPUT_LEN, stdin);
     source[strlen(source) - 1] = '\0';
 
     // Create the scanner around the source.
     scanner_t *s = scanner_make(source);
     while (TRUE) {
       token_t t = scanner_next(s);
-      if (t.kind == TOKEN_END) {
+      if (t.kind == TOKEN_ERROR) {
         break;
       }
       printf("%s\n", token_disp(t));
