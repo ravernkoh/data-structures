@@ -14,12 +14,50 @@ typedef int bool;
 bool is_digit(char c) { return c >= '0' && c <= '9'; }
 bool is_space(char c) { return c == '\t' || c == ' '; }
 
+////////////////////////////
+////////// TOKEN ///////////
+////////////////////////////
+
+typedef int op_assoc_t;
+const op_assoc_t OP_ASSOC_ERROR = 0;
+const op_assoc_t OP_ASSOC_LEFT = 1;
+const op_assoc_t OP_ASSOC_RIGHT = 2;
+
 typedef char op_kind_t;
 const op_kind_t OP_ERROR = 0;
 const op_kind_t OP_ADD = '+';
 const op_kind_t OP_SUB = '-';
 const op_kind_t OP_MUL = '*';
 const op_kind_t OP_DIV = '/';
+const op_kind_t OP_POW = '^';
+
+int op_prec(op_kind_t op) {
+  switch (op) {
+  case OP_ADD:
+  case OP_SUB:
+    return 1;
+  case OP_MUL:
+  case OP_DIV:
+    return 2;
+  case OP_POW:
+    return 3;
+  }
+  return 0;
+}
+
+op_assoc_t op_assoc(op_kind_t op) {
+  switch (op) {
+  case OP_ERROR:
+  case OP_ADD:
+  case OP_SUB:
+  case OP_MUL:
+  case OP_DIV:
+    return OP_ASSOC_LEFT;
+  case OP_POW:
+    return OP_ASSOC_RIGHT;
+  }
+  return 0;
+}
 
 typedef int token_kind_t;
 const token_kind_t TOKEN_ERROR = 0;
@@ -78,8 +116,12 @@ const char *token_disp(token_t t) {
     return num;
   }
   }
-  return "INVALID";
+  return "ERROR";
 }
+
+////////////////////////////
+///////// SCANNER //////////
+////////////////////////////
 
 typedef struct {
   const char *source;
@@ -156,6 +198,9 @@ token_t scanner_next(scanner_t *s) {
     } else if (peek == OP_DIV) {
       scanner_advance(s);
       return token_make(TOKEN_OP, token_value_make_op(OP_DIV));
+    } else if (peek == OP_POW) {
+      scanner_advance(s);
+      return token_make(TOKEN_OP, token_value_make_op(OP_POW));
     }
 
     s->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
@@ -163,6 +208,10 @@ token_t scanner_next(scanner_t *s) {
     return token_make_error();
   }
 }
+
+////////////////////////////
+////////// STACK ///////////
+////////////////////////////
 
 typedef struct {
   int len;
@@ -177,6 +226,9 @@ op_stack_t op_stack_make() {
   return s;
 }
 
+// Peeks the stack.
+op_kind_t op_stack_peek(op_stack_t *s) { return s->stack[s->len - 1]; }
+
 // Pushes a new operator onto the stack.
 void op_stack_push(op_stack_t *s, op_kind_t op) {
   if (s->len > MAX_STACK_LEN) {
@@ -188,6 +240,10 @@ void op_stack_push(op_stack_t *s, op_kind_t op) {
 
 // Pops an operator off the stack.
 op_kind_t op_stack_pop(op_stack_t *s) { return s->stack[--s->len]; }
+
+////////////////////////////
+/////////// AST ////////////
+////////////////////////////
 
 typedef int expr_kind_t;
 const expr_kind_t EXPR_ERROR = 0;
@@ -246,18 +302,85 @@ expr_t expr_make_error() {
   return expr_make(EXPR_ERROR, v);
 }
 
+////////////////////////////
+////////// PARSER //////////
+////////////////////////////
+
 typedef struct {
   scanner_t *scanner;
+  token_t peek;
+  char *error;
 } parser_t;
 
 // Creates a new parser.
 parser_t *parser_make(scanner_t *scanner) {
   parser_t *p = (parser_t *)malloc(sizeof(parser_t));
+  p->scanner = scanner;
+  p->peek = token_make_error();
+  p->error = NULL;
   return p;
 }
 
+// Peek the scanner at the current token.
+token_t parser_peek(parser_t *p) {
+  if (p->peek.kind == TOKEN_ERROR) {
+    p->peek = scanner_next(p->scanner);
+  }
+  return p->peek;
+}
+
+// Advances the scanner to the next token.
+void parser_advance(parser_t *p) {
+  if (p->peek.kind == TOKEN_ERROR) {
+    parser_peek(p);
+  }
+  p->peek = token_make_error();
+}
+
 // Parses an expression.
-expr_t parser_parse(parser_t *p) { return expr_make_error(); }
+expr_t parser_parse(parser_t *p) {
+  op_stack_t stack = op_stack_make();
+
+  while (TRUE) {
+    token_t peek = parser_peek(p);
+    if (peek.kind == TOKEN_ERROR) {
+      while (stack.len > 0) {
+        op_kind_t op = op_stack_pop(&stack);
+        token_t t = token_make(TOKEN_OP, token_value_make_op(op));
+        printf("%s\n", token_disp(t));
+      }
+      break;
+    }
+    parser_advance(p);
+
+    if (peek.kind == TOKEN_OP) {
+      while (TRUE) {
+        op_kind_t op = op_stack_peek(&stack);
+
+        bool end;
+        if (op_assoc(op) == OP_ASSOC_LEFT) {
+          end = op_prec(op_stack_peek(&stack)) < op_prec(peek.value.op);
+        } else {
+          end = op_prec(op_stack_peek(&stack)) <= op_prec(peek.value.op);
+        }
+
+        if (end) {
+          break;
+        }
+
+        op = op_stack_pop(&stack);
+        token_t t = token_make(TOKEN_OP, token_value_make_op(op));
+        printf("%s\n", token_disp(t));
+      }
+      op_stack_push(&stack, peek.value.op);
+      continue;
+    }
+
+    printf("%s\n", token_disp(peek));
+  }
+
+  return expr_make_error();
+}
 
 int main() {
   while (TRUE) {
@@ -270,12 +393,15 @@ int main() {
 
     // Create the scanner around the source.
     scanner_t *s = scanner_make(source);
-    while (TRUE) {
-      token_t t = scanner_next(s);
-      if (t.kind == TOKEN_ERROR) {
-        break;
-      }
-      printf("%s\n", token_disp(t));
+
+    // Create the parser around the scanner.
+    parser_t *p = parser_make(s);
+    parser_parse(p);
+
+    // Check for parser error.
+    if (p->error != NULL) {
+      printf("error: %s\n", p->error);
+      continue;
     }
 
     // Check for scanner error.
