@@ -454,6 +454,9 @@ expr_t *parser_parse(parser_t *p) {
   }
 
   expr_t *e = expr_stack_pop(&exprs);
+  if (e == NULL) {
+    return NULL;
+  }
 
   if (exprs.len > 0) {
     p->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
@@ -507,6 +510,8 @@ int eval_evaluate(eval_t *e, expr_t *expr) {
 }
 
 int main() {
+  printf("Simple Expression Evaluator 1.0.0\n");
+  printf("Ravern Koh 2018\n");
   while (TRUE) {
     printf("> ");
 
@@ -531,6 +536,12 @@ int main() {
     // Check for scanner error.
     if (s->error != NULL) {
       printf("error: %s\n", s->error);
+      continue;
+    }
+
+    // Check for NULL expression.
+    if (expr == NULL) {
+      continue;
     }
 
     // Evaluate the expression.
