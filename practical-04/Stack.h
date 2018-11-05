@@ -1,11 +1,13 @@
 
 // Stack.h (Pointer-based implementation)
 #pragma once
+
 #include <iostream>
+#include <string>
 
 using namespace std;
 
-typedef int ItemType;
+typedef string ItemType;
 
 class Stack {
 private:
@@ -26,7 +28,7 @@ public:
   bool isEmpty();
 
   // push item on top of the stack
-  bool push(ItemType &item);
+  bool push(ItemType item);
 
   // pop item from top of stack
   bool pop();

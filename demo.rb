@@ -24,6 +24,7 @@ def run(files)
   puts "Compiling #{filenames * ' '}..."
   Dir.mktmpdir('rucppy') do |dir|
     compile_command = "g++ #{files * ' '} -o #{dir}/a.out --std=c++11"
+    puts compile_command
     `#{compile_command}`
     system("#{dir}/a.out")
   end

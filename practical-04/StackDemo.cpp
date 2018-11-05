@@ -1,9 +1,19 @@
 #include "Stack.h"
 #include <iostream>
 
-using namespace std;
-
 int main() {
-  cout << "Hello, world!" << endl;
+  Stack s;
+
+  s.push("3");
+  s.push("4");
+
+  ItemType top;
+  s.getTop(top);
+  cout << top << endl;
+
+  s.displayInOrderOfInsertion();
+  s.pop();
+  s.displayInOrderOfInsertion();
+
   return 0;
 }
