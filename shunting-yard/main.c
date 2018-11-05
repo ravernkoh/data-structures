@@ -13,24 +13,24 @@ typedef int bool;
 bool is_digit(char c) { return c >= '0' && c <= '9'; }
 bool is_space(char c) { return c == '\t' || c == ' '; }
 
+typedef char op_kind_t;
+const op_kind_t OP_ADD = '+';
+const op_kind_t OP_SUB = '-';
+const op_kind_t OP_MUL = '*';
+const op_kind_t OP_DIV = '/';
+
 typedef int token_kind_t;
 const token_kind_t TOKEN_END = 0;
 const token_kind_t TOKEN_OP = 1;
 const token_kind_t TOKEN_NUM = 2;
 
-typedef char op_t;
-const op_t OP_ADD = '+';
-const op_t OP_SUB = '-';
-const op_t OP_MUL = '*';
-const op_t OP_DIV = '/';
-
 typedef union {
-  op_t op;
+  op_kind_t op;
   int num;
 } token_value_t;
 
 // Creates a new op value.
-token_value_t token_value_make_op(op_t op) {
+token_value_t token_value_make_op(op_kind_t op) {
   token_value_t v;
   v.op = op;
   return v;
@@ -156,6 +156,57 @@ token_t scanner_next(scanner_t *s) {
     sprintf(s->error, "unexpected char '%c'", peek);
     return token_make_end();
   }
+}
+
+typedef int expr_kind_t;
+const expr_kind_t EXPR_BIN_ERR = 0;
+const expr_kind_t EXPR_BIN_OP = 1;
+const expr_kind_t EXPR_NUM = 2;
+
+// Forward declaration of `expr_t`.
+struct expr_t;
+
+typedef struct {
+  op_kind_t op;
+  struct expr_t *left;
+  struct expr_t *right;
+} bin_op_t;
+
+bin_op_t bin_op_make(op_kind_t op, struct expr_t *left, struct expr_t *right) {
+  bin_op_t bin_op;
+  bin_op.op = op;
+  bin_op.left = left;
+  bin_op.right = right;
+  return bin_op;
+}
+
+typedef union {
+  bin_op_t bin_op;
+  int num;
+} expr_value_t;
+
+expr_value_t expr_value_make_bin(bin_op_t bin_op) {
+  expr_value_t v;
+  v.bin_op = bin_op;
+  return v;
+}
+
+expr_value_t expr_value_make_num(int num) {
+  expr_value_t v;
+  v.num = num;
+  return v;
+}
+
+typedef struct {
+  expr_kind_t kind;
+  expr_value_t value;
+} expr_t;
+
+expr_t expr_make(expr_kind_t kind, expr_value_t value) {
+  expr_t e;
+  e.kind = kind;
+  e.value = value;
+  return e;
 }
 
 int main() {
