@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -379,23 +380,23 @@ void parser_advance(parser_t *p) {
 }
 
 // Build an expression from the operator and the expression stack.
-expr_t *parser_build_bin_op(parser_t *p, op_kind_t op, expr_stack_t *exprs) {
-  struct expr_t *left = (struct expr_t *)expr_stack_pop(exprs);
+bool parser_build_bin_op(parser_t *p, op_kind_t op, expr_stack_t *exprs) {
   struct expr_t *right = (struct expr_t *)expr_stack_pop(exprs);
+  struct expr_t *left = (struct expr_t *)expr_stack_pop(exprs);
   if (left == NULL || right == NULL) {
     p->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
     sprintf(p->error, "unexpected operator '%c'", op);
-    return NULL;
+    return FALSE;
   }
 
   bin_op_t bin_op = bin_op_make(op, left, right);
-  return expr_make(EXPR_BIN_OP, expr_value_make_bin(bin_op));
+  expr_t *e = expr_make(EXPR_BIN_OP, expr_value_make_bin(bin_op));
+  expr_stack_push(exprs, e);
+  return TRUE;
 }
 
 // Parses an expression using the shunting-yard algorithm.
 expr_t *parser_parse(parser_t *p) {
-  expr_t *expr = NULL;
-
   expr_stack_t exprs = expr_stack_make();
   op_stack_t ops = op_stack_make();
 
@@ -404,13 +405,9 @@ expr_t *parser_parse(parser_t *p) {
     if (peek.kind == TOKEN_ERROR) {
       while (ops.len > 0) {
         op_kind_t op = op_stack_pop(&ops);
-
-        expr_t *e = parser_build_bin_op(p, op, &exprs);
-        if (e == NULL) {
+        if (!parser_build_bin_op(p, op, &exprs)) {
           return NULL;
         }
-
-        expr = e;
       }
       break;
     }
@@ -436,13 +433,9 @@ expr_t *parser_parse(parser_t *p) {
         }
 
         op = op_stack_pop(&ops);
-
-        expr_t *e = parser_build_bin_op(p, op, &exprs);
-        if (e == NULL) {
+        if (!parser_build_bin_op(p, op, &exprs)) {
           return NULL;
         }
-
-        expr = e;
       }
 
       op_stack_push(&ops, peek.value.op);
@@ -456,9 +449,11 @@ expr_t *parser_parse(parser_t *p) {
       continue;
     }
 
-    printf("error: invalid token type\n");
+    printf("error: invalid token kind\n");
     exit(1);
   }
+
+  expr_t *e = expr_stack_pop(&exprs);
 
   if (exprs.len > 0) {
     p->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
@@ -466,7 +461,49 @@ expr_t *parser_parse(parser_t *p) {
     return NULL;
   }
 
-  return expr;
+  return e;
+}
+
+////////////////////////////
+///////// EVALUATOR ////////
+////////////////////////////
+
+typedef struct {
+} eval_t;
+
+eval_t *eval_make() {
+  eval_t *e = (eval_t *)malloc(sizeof(eval_t));
+  return e;
+}
+
+int eval_evaluate(eval_t *e, expr_t *expr) {
+  if (expr->kind == EXPR_NUM) {
+    return expr->value.num;
+  }
+
+  if (expr->kind == EXPR_BIN_OP) {
+    int left = eval_evaluate(e, (expr_t *)expr->value.bin_op.left);
+    int right = eval_evaluate(e, (expr_t *)expr->value.bin_op.right);
+
+    switch (expr->value.bin_op.op) {
+    case OP_ADD:
+      return left + right;
+    case OP_SUB:
+      return left - right;
+    case OP_MUL:
+      return left * right;
+    case OP_DIV:
+      return left / right;
+    case OP_POW:
+      return (int)pow((double)left, (double)right);
+    }
+
+    printf("error: invalid operator\n");
+    exit(1);
+  }
+
+  printf("error: invalid expression kind\n");
+  exit(1);
 }
 
 int main() {
@@ -483,7 +520,7 @@ int main() {
 
     // Create the parser around the scanner.
     parser_t *p = parser_make(s);
-    parser_parse(p);
+    expr_t *expr = parser_parse(p);
 
     // Check for parser error.
     if (p->error != NULL) {
@@ -495,5 +532,9 @@ int main() {
     if (s->error != NULL) {
       printf("error: %s\n", s->error);
     }
+
+    // Evaluate the expression.
+    eval_t *e = eval_make();
+    printf("%i\n", eval_evaluate(e, expr));
   }
 }
