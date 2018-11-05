@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef int bool;
 #define TRUE 1
 #define FALSE 0
 
@@ -10,31 +11,19 @@
 #define MAX_LITERAL_LENGTH 50
 #define MAX_INPUT_LENGTH 100
 
+bool is_digit(char c) { return c >= '0' && c <= '9'; }
+bool is_space(char c) { return c == '\t' || c == ' '; }
+
 typedef int token_kind_t;
-const token_kind_t TOKEN_INVALID = 0;
+const token_kind_t TOKEN_END = 0;
 const token_kind_t TOKEN_OP = 1;
 const token_kind_t TOKEN_NUM = 2;
 
-typedef int op_t;
-const op_t OP_ADD = 1;
-const op_t OP_SUB = 2;
-const op_t OP_MUL = 3;
-const op_t OP_DIV = 4;
-
-// Display the op.
-const char *op_disp(op_t op) {
-  switch (op) {
-  case OP_ADD:
-    return "+";
-  case OP_SUB:
-    return "-";
-  case OP_MUL:
-    return "*";
-  case OP_DIV:
-    return "/";
-  }
-  return "INVALID";
-}
+typedef char op_t;
+const op_t OP_ADD = '+';
+const op_t OP_SUB = '-';
+const op_t OP_MUL = '*';
+const op_t OP_DIV = '/';
 
 typedef union {
   op_t op;
@@ -55,7 +44,7 @@ token_value_t token_value_make_num(int num) {
   return v;
 }
 
-typedef union {
+typedef struct {
   token_kind_t kind;
   token_value_t value;
 } token_t;
@@ -69,17 +58,20 @@ token_t token_make(token_kind_t kind, token_value_t value) {
 }
 
 // Creates a new invalid token.
-token_t token_make_invalid() {
+token_t token_make_end() {
   token_t t;
-  t.kind = TOKEN_INVALID;
+  t.kind = TOKEN_END;
   return t;
 }
 
 // Displays the token.
 const char *token_disp(token_t t) {
   switch (t.kind) {
-  case TOKEN_OP:
-    return op_disp(t.value.op);
+  case TOKEN_OP: {
+    char *op = (char *)malloc(sizeof(char) * 4);
+    sprintf(op, "%c", t.value.op);
+    return op;
+  }
   case TOKEN_NUM: {
     char *num = (char *)malloc(sizeof(char) * MAX_LITERAL_LENGTH);
     sprintf(num, "%i", t.value.num);
@@ -91,6 +83,7 @@ const char *token_disp(token_t t) {
 
 typedef struct {
   const char *source;
+  char *error;
   char *literal;
 } scanner_t;
 
@@ -98,22 +91,55 @@ typedef struct {
 scanner_t *scanner_make(const char *source) {
   scanner_t *t = (scanner_t *)malloc(sizeof(scanner_t));
   t->source = source;
-  t->literal = NULL;
+  t->literal = (char *)malloc(sizeof(char) * MAX_LITERAL_LENGTH);
   return t;
 }
 
 // Peek the source at the current char.
-char scanner_peek(scanner_t *t) { return *t->source; }
+char scanner_peek(scanner_t *s) { return *s->source; }
 
 // Advance the source to the next char.
-void scanner_advance(scanner_t *t) { t->source = &t->source[1]; }
+void scanner_advance(scanner_t *s) { s->source = &s->source[1]; }
+
+// Returns the next number token.
+token_t scanner_next_number(scanner_t *s) { return token_make_end(); }
 
 // Returns the next token.
-token_t scanner_next(scanner_t *t) {
-  if (scanner_peek(t) == '\0') {
-    return token_make_invalid();
+token_t scanner_next(scanner_t *s) {
+  while (TRUE) {
+    char peek = scanner_peek(s);
+
+    // Check for end or whitespace.
+    if (peek == '\0') {
+      return token_make_end();
+    } else if (is_space(peek)) {
+      scanner_advance(s);
+      continue;
+    }
+
+    // Check for number.
+    if (is_digit(peek)) {
+      return scanner_next_number(s);
+    }
+
+    // Check for operators.
+    if (peek == OP_ADD) {
+      scanner_advance(s);
+      return token_make(TOKEN_OP, token_value_make_op(OP_ADD));
+    } else if (peek == OP_SUB) {
+      scanner_advance(s);
+      return token_make(TOKEN_OP, token_value_make_op(OP_SUB));
+    } else if (peek == OP_MUL) {
+      scanner_advance(s);
+      return token_make(TOKEN_OP, token_value_make_op(OP_MUL));
+    } else if (peek == OP_DIV) {
+      scanner_advance(s);
+      return token_make(TOKEN_OP, token_value_make_op(OP_DIV));
+    }
+
+    sprintf(s->error, "unexpected char %c", peek);
+    return token_make_end();
   }
-  return token_make(TOKEN_OP, token_value_make_op(OP_ADD));
 }
 
 int main() {
