@@ -6,8 +6,6 @@ typedef int bool;
 #define TRUE 1
 #define FALSE 0
 
-#define MAX_STACK_SIZE 50
-#define MAX_TOKEN_NUM 50
 #define MAX_LITERAL_LENGTH 50
 #define MAX_INPUT_LENGTH 100
 #define MAX_ERROR_LENGTH 50
