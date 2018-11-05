@@ -104,7 +104,22 @@ char scanner_peek(scanner_t *s) { return *s->source; }
 void scanner_advance(scanner_t *s) { s->source = &s->source[1]; }
 
 // Returns the next number token.
-token_t scanner_next_number(scanner_t *s) { return token_make_end(); }
+token_t scanner_next_number(scanner_t *s) {
+  int len = 0;
+
+  while (TRUE) {
+    char peek = scanner_peek(s);
+    if (!is_digit(peek)) {
+      break;
+    }
+
+    s->literal[len++] = peek;
+    scanner_advance(s);
+  }
+  s->literal[len] = '\0';
+
+  return token_make(TOKEN_NUM, token_value_make_num(atoi(s->literal)));
+}
 
 // Returns the next token.
 token_t scanner_next(scanner_t *s) {
@@ -169,6 +184,4 @@ int main() {
       printf("error: %s\n", s->error);
     }
   }
-
-  return 0;
 }
