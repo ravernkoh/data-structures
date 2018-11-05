@@ -210,43 +210,10 @@ token_t scanner_next(scanner_t *s) {
 }
 
 ////////////////////////////
-////////// STACK ///////////
-////////////////////////////
-
-typedef struct {
-  int len;
-  op_kind_t *stack;
-} op_stack_t;
-
-// Creates a new operator stack.
-op_stack_t op_stack_make() {
-  op_stack_t s;
-  s.len = 0;
-  s.stack = (op_kind_t *)malloc(sizeof(op_kind_t) * MAX_STACK_LEN);
-  return s;
-}
-
-// Peeks the stack.
-op_kind_t op_stack_peek(op_stack_t *s) { return s->stack[s->len - 1]; }
-
-// Pushes a new operator onto the stack.
-void op_stack_push(op_stack_t *s, op_kind_t op) {
-  if (s->len > MAX_STACK_LEN) {
-    printf("error: exceeded max stack length\n");
-    exit(1);
-  }
-  s->stack[s->len++] = op;
-}
-
-// Pops an operator off the stack.
-op_kind_t op_stack_pop(op_stack_t *s) { return s->stack[--s->len]; }
-
-////////////////////////////
 /////////// AST ////////////
 ////////////////////////////
 
 typedef int expr_kind_t;
-const expr_kind_t EXPR_ERROR = 0;
 const expr_kind_t EXPR_BIN_OP = 1;
 const expr_kind_t EXPR_NUM = 2;
 
@@ -289,17 +256,91 @@ typedef struct {
   expr_value_t value;
 } expr_t;
 
-expr_t expr_make(expr_kind_t kind, expr_value_t value) {
-  expr_t e;
-  e.kind = kind;
-  e.value = value;
+expr_t *expr_make(expr_kind_t kind, expr_value_t value) {
+  expr_t *e = (expr_t *)malloc(sizeof(expr_t));
+  e->kind = kind;
+  e->value = value;
   return e;
 }
 
-// Creates a new error expression.
-expr_t expr_make_error() {
-  expr_value_t v;
-  return expr_make(EXPR_ERROR, v);
+////////////////////////////
+////////// STACKS //////////
+////////////////////////////
+
+typedef struct {
+  int len;
+  op_kind_t *stack;
+} op_stack_t;
+
+// Creates a new operator stack.
+op_stack_t op_stack_make() {
+  op_stack_t s;
+  s.len = 0;
+  s.stack = (op_kind_t *)malloc(sizeof(op_kind_t) * MAX_STACK_LEN);
+  return s;
+}
+
+// Peeks the stack.
+op_kind_t op_stack_peek(op_stack_t *s) {
+  if (s->len == 0) {
+    return OP_ERROR;
+  }
+  return s->stack[s->len - 1];
+}
+
+// Pushes a new operator onto the stack.
+void op_stack_push(op_stack_t *s, op_kind_t op) {
+  if (s->len > MAX_STACK_LEN) {
+    printf("error: exceeded max stack length\n");
+    exit(1);
+  }
+  s->stack[s->len++] = op;
+}
+
+// Pops an operator off the stack.
+op_kind_t op_stack_pop(op_stack_t *s) {
+  if (s->len == 0) {
+    return OP_ERROR;
+  }
+  return s->stack[--s->len];
+}
+
+typedef struct {
+  int len;
+  expr_t **stack;
+} expr_stack_t;
+
+// Creates a new expression stack.
+expr_stack_t expr_stack_make() {
+  expr_stack_t s;
+  s.len = 0;
+  s.stack = (expr_t **)malloc(sizeof(expr_t *) * MAX_STACK_LEN);
+  return s;
+}
+
+// Peeks the stack.
+expr_t *expr_stack_peek(expr_stack_t *s) {
+  if (s->len == 0) {
+    return NULL;
+  }
+  return s->stack[s->len - 1];
+}
+
+// Pushes a new expression onto the stack.
+void expr_stack_push(expr_stack_t *s, expr_t *e) {
+  if (s->len > MAX_STACK_LEN) {
+    printf("error: exceeded max stack length\n");
+    exit(1);
+  }
+  s->stack[s->len++] = e;
+}
+
+// Pops an expression off the stack.
+expr_t *expr_stack_pop(expr_stack_t *s) {
+  if (s->len == 0) {
+    return NULL;
+  }
+  return s->stack[--s->len];
 }
 
 ////////////////////////////
@@ -337,49 +378,89 @@ void parser_advance(parser_t *p) {
   p->peek = token_make_error();
 }
 
-// Parses an expression.
-expr_t parser_parse(parser_t *p) {
-  op_stack_t stack = op_stack_make();
+// Assembles an expression from the operator and the expression stack.
+expr_t *parser_assemble_bin_op(parser_t *p, op_kind_t op, expr_stack_t *exprs) {
+  struct expr_t *left = (struct expr_t *)expr_stack_pop(exprs);
+  struct expr_t *right = (struct expr_t *)expr_stack_pop(exprs);
+  if (left == NULL || right == NULL) {
+    p->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
+    sprintf(p->error, "unexpected operator '%c'", op);
+    return NULL;
+  }
+
+  bin_op_t bin_op = bin_op_make(op, left, right);
+  return expr_make(EXPR_BIN_OP, expr_value_make_bin(bin_op));
+}
+
+// Parses an expression using the shunting-yard algorithm.
+expr_t *parser_parse(parser_t *p) {
+  expr_t *expr = NULL;
+
+  expr_stack_t exprs = expr_stack_make();
+  op_stack_t ops = op_stack_make();
 
   while (TRUE) {
     token_t peek = parser_peek(p);
     if (peek.kind == TOKEN_ERROR) {
-      while (stack.len > 0) {
-        op_kind_t op = op_stack_pop(&stack);
-        token_t t = token_make(TOKEN_OP, token_value_make_op(op));
-        printf("%s\n", token_disp(t));
+      while (ops.len > 0) {
+        op_kind_t op = op_stack_pop(&ops);
+
+        expr_t *e = parser_assemble_bin_op(p, op, &exprs);
+        if (e == NULL) {
+          return NULL;
+        }
+
+        expr = e;
       }
       break;
     }
     parser_advance(p);
 
+    // Perform some operator magic.
     if (peek.kind == TOKEN_OP) {
       while (TRUE) {
-        op_kind_t op = op_stack_peek(&stack);
+        op_kind_t op = op_stack_peek(&ops);
+        if (op == OP_ERROR) {
+          break;
+        }
 
         bool end;
         if (op_assoc(op) == OP_ASSOC_LEFT) {
-          end = op_prec(op_stack_peek(&stack)) < op_prec(peek.value.op);
+          end = op_prec(op_stack_peek(&ops)) < op_prec(peek.value.op);
         } else {
-          end = op_prec(op_stack_peek(&stack)) <= op_prec(peek.value.op);
+          end = op_prec(op_stack_peek(&ops)) <= op_prec(peek.value.op);
         }
 
         if (end) {
           break;
         }
 
-        op = op_stack_pop(&stack);
-        token_t t = token_make(TOKEN_OP, token_value_make_op(op));
-        printf("%s\n", token_disp(t));
+        op = op_stack_pop(&ops);
+
+        expr_t *e = parser_assemble_bin_op(p, op, &exprs);
+        if (e == NULL) {
+          return NULL;
+        }
+
+        expr = e;
       }
-      op_stack_push(&stack, peek.value.op);
+
+      op_stack_push(&ops, peek.value.op);
       continue;
     }
 
-    printf("%s\n", token_disp(peek));
+    // Push the number as an expression.
+    if (peek.kind == TOKEN_NUM) {
+      expr_t *e = expr_make(EXPR_NUM, expr_value_make_num(peek.value.num));
+      expr_stack_push(&exprs, e);
+      continue;
+    }
+
+    printf("error: invalid token type\n");
+    exit(1);
   }
 
-  return expr_make_error();
+  return expr;
 }
 
 int main() {
