@@ -10,52 +10,47 @@
 #define MAX_LITERAL_LENGTH 50
 #define MAX_INPUT_LENGTH 100
 
-typedef int TokenType;
-const TokenType TOKEN_OP = 1;
-const TokenType TOKEN_NUM = 2;
+typedef int token_kind_t;
+const token_kind_t TOKEN_OP = 1;
+const token_kind_t TOKEN_NUM = 2;
 
-typedef int Op;
-const Op OP_ADD = 1;
-const Op OP_SUB = 2;
-const Op OP_MUL = 3;
-const Op OP_DIV = 4;
-
-typedef struct {
-  TokenType type;
-  int op;
-} TokenOp;
-
-typedef struct {
-  TokenType type;
-  int num;
-} TokenNum;
+typedef int op_t;
+const op_t OP_ADD = 1;
+const op_t OP_SUB = 2;
+const op_t OP_MUL = 3;
+const op_t OP_DIV = 4;
 
 typedef union {
-  TokenOp op;
-  TokenNum num;
-} Token;
+  int op;
+  int num;
+} token_value_t;
+
+typedef union {
+  token_kind_t kind;
+  token_value_t value;
+} token_t;
 
 typedef struct {
   const char *source;
   char *literal;
-} Tokenizer;
+} scanner_t;
 
-Tokenizer *TokenizerNew(const char *source) {
-  Tokenizer *t = (Tokenizer *)malloc(sizeof(Tokenizer));
+scanner_t *scanner_make(const char *source) {
+  scanner_t *t = (scanner_t *)malloc(sizeof(scanner_t));
   t->source = source;
   t->literal = NULL;
   return t;
 }
 
 // Peek the source at the current char.
-char TokenizerPeek(Tokenizer *t) { return *t->source; }
+char scanner_peek(scanner_t *t) { return *t->source; }
 
 // Advance the source to the next char.
-void TokenizerAdvance(Tokenizer *t) { t->source = &t->source[1]; }
+void scanner_advance(scanner_t *t) { t->source = &t->source[1]; }
 
 // Returns the next token.
-Token *TokenizerNext(Tokenizer *t) {
-  if (TokenizerPeek(t) == '\0') {
+token_t *scanner_next(scanner_t *t) {
+  if (scanner_peek(t) == '\0') {
     return NULL;
   }
   return NULL;
@@ -70,8 +65,8 @@ int main() {
     fgets(source, MAX_INPUT_LENGTH, stdin);
     source[strlen(source) - 1] = '\0';
 
-    Tokenizer *t = TokenizerNew(source);
-    printf("%d\n", TokenizerNext(t));
+    scanner_t *t = scanner_make(source);
+    printf("%d\n", scanner_next(t));
   }
 
   return 0;
