@@ -272,40 +272,37 @@ expr_t *expr_make(expr_kind_t kind, expr_value_t value) {
 
 typedef struct {
   int len;
-  op_kind_t *stack;
+  Stack *stack;
 } op_stack_t;
 
 // Creates a new operator stack.
 op_stack_t op_stack_make() {
   op_stack_t s;
   s.len = 0;
-  s.stack = (op_kind_t *)malloc(sizeof(op_kind_t) * MAX_STACK_LEN);
+  s.stack = new Stack();
   return s;
 }
 
 // Peeks the stack.
 op_kind_t op_stack_peek(op_stack_t *s) {
-  if (s->len == 0) {
-    return OP_ERROR;
-  }
-  return s->stack[s->len - 1];
+  ItemType item = OP_ERROR;
+  s->stack->getTop(item);
+  return item;
 }
 
 // Pushes a new operator onto the stack.
 void op_stack_push(op_stack_t *s, op_kind_t op) {
-  if (s->len > MAX_STACK_LEN) {
-    printf("error: exceeded max stack length\n");
-    exit(1);
-  }
-  s->stack[s->len++] = op;
+  s->len++;
+  s->stack->push(op);
 }
 
 // Pops an operator off the stack.
 op_kind_t op_stack_pop(op_stack_t *s) {
-  if (s->len == 0) {
-    return OP_ERROR;
-  }
-  return s->stack[--s->len];
+  ItemType item = OP_ERROR;
+  s->len--;
+  s->stack->pop(item);
+  s->stack->displayInOrder();
+  return item;
 }
 
 typedef struct {
@@ -555,8 +552,8 @@ void shuntingYard() {
 int main() {
   Stack s;
 
-  s.push("3");
-  s.push("4");
+  s.push(3);
+  s.push(4);
 
   ItemType top;
   s.getTop(top);
