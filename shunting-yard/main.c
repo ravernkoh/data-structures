@@ -219,15 +219,15 @@ const expr_kind_t EXPR_BIN_OP = 1;
 const expr_kind_t EXPR_NUM = 2;
 
 // Forward declaration of `expr_t`.
-struct expr_t;
+typedef struct expr_t expr_t;
 
 typedef struct {
   op_kind_t op;
-  struct expr_t *left;
-  struct expr_t *right;
+  expr_t *left;
+  expr_t *right;
 } bin_op_t;
 
-bin_op_t bin_op_make(op_kind_t op, struct expr_t *left, struct expr_t *right) {
+bin_op_t bin_op_make(op_kind_t op, expr_t *left, expr_t *right) {
   bin_op_t bin_op;
   bin_op.op = op;
   bin_op.left = left;
@@ -252,10 +252,10 @@ expr_value_t expr_value_make_num(int num) {
   return v;
 }
 
-typedef struct {
+struct expr_t {
   expr_kind_t kind;
   expr_value_t value;
-} expr_t;
+};
 
 expr_t *expr_make(expr_kind_t kind, expr_value_t value) {
   expr_t *e = (expr_t *)malloc(sizeof(expr_t));
@@ -381,8 +381,8 @@ void parser_advance(parser_t *p) {
 
 // Build an expression from the operator and the expression stack.
 bool parser_build_bin_op(parser_t *p, op_kind_t op, expr_stack_t *exprs) {
-  struct expr_t *right = (struct expr_t *)expr_stack_pop(exprs);
-  struct expr_t *left = (struct expr_t *)expr_stack_pop(exprs);
+  expr_t *right = expr_stack_pop(exprs);
+  expr_t *left = expr_stack_pop(exprs);
   if (left == NULL || right == NULL) {
     p->error = (char *)malloc(sizeof(char) * MAX_ERROR_LEN);
     sprintf(p->error, "unexpected operator '%c'", op);
@@ -485,8 +485,8 @@ int eval_evaluate(eval_t *e, expr_t *expr) {
   }
 
   if (expr->kind == EXPR_BIN_OP) {
-    int left = eval_evaluate(e, (expr_t *)expr->value.bin_op.left);
-    int right = eval_evaluate(e, (expr_t *)expr->value.bin_op.right);
+    int left = eval_evaluate(e, expr->value.bin_op.left);
+    int right = eval_evaluate(e, expr->value.bin_op.right);
 
     switch (expr->value.bin_op.op) {
     case OP_ADD:
