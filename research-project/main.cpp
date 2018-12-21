@@ -17,6 +17,8 @@ Product products[NUM_PRODUCTS] = {{"iPhone 7", 10, 1088},
                                   {"Xperia Z", 10, 899},
                                   {"Redmi 3S", 10, 299}};
 
+// Adapted from this StackOverflow answer:
+// https://stackoverflow.com/a/3418285
 void replaceAll(string &str, const string &from, const string &to) {
   if (from.empty()) {
     return;
@@ -46,7 +48,6 @@ bool writeToFile1() {
     product1 << product.name << "\t";
     product1 << product.quantity << "\t";
     product1 << product.price << "\t";
-    product1 << product.quantity * product.price << "\t";
     product1 << endl;
   }
 
@@ -55,4 +56,72 @@ bool writeToFile1() {
   return true;
 }
 
-int main() { writeToFile1(); }
+// Reads product information from `product1.txt`, calculates the amounts and
+// displays the results.
+bool readFromFile1() {
+  ifstream product1;
+  product1.open("product1.txt");
+
+  if (!product1.is_open()) {
+    return false;
+  }
+
+  cout << "Name\t\tQty\tPrice\tAmount" << endl;
+
+  for (int i = 0; i < NUM_PRODUCTS; i++) {
+    Product product;
+    product1 >> product.name;
+    product1 >> product.quantity;
+    product1 >> product.price;
+    cout << product.name << "\t";
+    cout << product.quantity << "\t";
+    cout << (int)product.price << "\t";
+    cout << product.quantity * (int)product.price << "\t";
+    cout << endl;
+  }
+
+  product1.close();
+
+  return true;
+}
+
+// Reads product information from `product1.txt`, calculates the amounts and
+// writes the results to `transaction1.txt`.
+bool readWriteFile1() {
+  ifstream product1;
+  product1.open("product1.txt");
+
+  if (!product1.is_open()) {
+    return false;
+  }
+
+  ofstream transaction1;
+  transaction1.open("transaction1.txt");
+
+  if (!transaction1.is_open()) {
+    return false;
+  }
+
+  for (int i = 0; i < NUM_PRODUCTS; i++) {
+    Product product;
+    product1 >> product.name;
+    product1 >> product.quantity;
+    product1 >> product.price;
+    transaction1 << product.name << "\t";
+    transaction1 << product.quantity << "\t";
+    transaction1 << (int)product.price << "\t";
+    transaction1 << product.quantity * (int)product.price << "\t";
+    transaction1 << endl;
+  }
+
+  product1.close();
+  transaction1.close();
+
+  return true;
+}
+
+int main() {
+  writeToFile1();
+  readFromFile1();
+  readWriteFile1();
+}
